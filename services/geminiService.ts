@@ -61,6 +61,24 @@ export const getNextTurn = (turnIndex: number): { dougen: string, options: Optio
   };
 };
 
+// Generic fallback reactions if specific script data is missing
+const GENERIC_REBUTTALS_WORST = [
+  "别胡说八道！",
+  "没您这么聊天的！",
+  "去你的吧！",
+  "怎么说话呢？",
+  "您这是来捣乱的吧？",
+  "嗨！什么乱七八糟的！"
+];
+
+const GENERIC_REBUTTALS_NEUTRAL = [
+  "咳，您先听我说。",
+  "别打岔，听我往下讲。",
+  "先别急，让我说完。",
+  "这都哪跟哪啊，您听好了。",
+  "不是，您理解岔了。"
+];
+
 export const evaluateTurn = async (turnIndex: number, choiceText: string): Promise<TurnEvaluationResponse> => {
   await delay(800); // Simulate natural pause
   
@@ -80,12 +98,13 @@ export const evaluateTurn = async (turnIndex: number, choiceText: string): Promi
   const chosenOption = currentTurnData.options.find(o => o.text === choiceText);
   const isBest = chosenOption?.id === currentTurnData.bestId;
   const isWorst = chosenOption?.id === currentTurnData.worstId;
+  const chosenId = chosenOption?.id;
   
   let hecai = 0;
   let daocai = 0;
   let feedback = "嗯...";
 
-  // Simple feedback logic
+  // 1. Calculate Score Impact
   if (isBest) {
     hecai = 1;
     const praises = ["好！接得严丝合缝！", "漂亮！这就叫尺寸！", "好！这包袱翻得脆！", "对咯！要的就是这句！"];
@@ -99,6 +118,26 @@ export const evaluateTurn = async (turnIndex: number, choiceText: string): Promi
     feedback = neutral[Math.floor(Math.random() * neutral.length)];
   }
 
+  // 2. Determine Specific Reaction Line (The "Fix")
+  let reactionLine: string | undefined = undefined;
+
+  // Try to find specific reaction in the script data
+  // @ts-ignore - 'reactions' is optional in data
+  if (currentTurnData.reactions && chosenId && currentTurnData.reactions[chosenId]) {
+    // @ts-ignore
+    reactionLine = currentTurnData.reactions[chosenId];
+  } 
+  // If no specific reaction, but it was a bad choice, generate a generic one
+  else if (isWorst) {
+    reactionLine = GENERIC_REBUTTALS_WORST[Math.floor(Math.random() * GENERIC_REBUTTALS_WORST.length)];
+  }
+  else if (!isBest) {
+    // Sometimes add a generic neutral re-director
+    if (Math.random() > 0.6) {
+      reactionLine = GENERIC_REBUTTALS_NEUTRAL[Math.floor(Math.random() * GENERIC_REBUTTALS_NEUTRAL.length)];
+    }
+  }
+
   const nextTurnIndex = turnIndex; // The NEXT turn data is at array index `turnIndex` (since current was `turnIndex-1`)
   const hasNextTurn = nextTurnIndex < currentOfflineScript.turns.length;
 
@@ -107,6 +146,7 @@ export const evaluateTurn = async (turnIndex: number, choiceText: string): Promi
     feedback,
     isSuccess: isBest,
     isGameOver: !hasNextTurn, // Mark as game over if no next turn
+    reactionLine: reactionLine, // The Dougen's immediate response to the user
     nextDougenLine: hasNextTurn ? currentOfflineScript.turns[nextTurnIndex].dougen : undefined,
     nextOptions: hasNextTurn ? shuffleArray(currentOfflineScript.turns[nextTurnIndex].options) : undefined
   };

@@ -188,8 +188,15 @@ const App: React.FC = () => {
       setGameState(prev => {
         const updatedMessages: ChatMessage[] = [...prev.messages]; 
         
+        // Add meta feedback
         updatedMessages.push({ role: Role.DOUGEN, text: result.feedback, isEvaluation: true });
 
+        // IMPORTANT: Add the immediate reaction (correction/scolding) BEFORE the next plot point
+        if (result.reactionLine) {
+           updatedMessages.push({ role: Role.DOUGEN, text: result.reactionLine });
+        }
+
+        // Add the next plot line (if game continues)
         if (nextScreen === Screen.PLAYING && result.nextDougenLine) {
            updatedMessages.push({ role: Role.DOUGEN, text: result.nextDougenLine });
         }

@@ -52,6 +52,7 @@ export interface TurnEvaluationResponse {
   feedback: string; // The "audience" or "master" reaction text
   isGameOver: boolean; // Did the user fail naturally (not just by threshold)?
   isSuccess: boolean; // Was this a good move?
-  nextDougenLine?: string; // The next line from the AI
+  reactionLine?: string; // NEW: Specific line spoken by Dougen to react to the user's choice (e.g., scolding)
+  nextDougenLine?: string; // The next line from the AI (continuation of plot)
   nextOptions?: Option[]; // The next set of choices
 }
